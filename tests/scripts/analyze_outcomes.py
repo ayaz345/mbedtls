@@ -25,11 +25,11 @@ class Results:
         sys.stderr.write((fmt + '\n').format(*args, **kwargs))
 
     def error(self, fmt, *args, **kwargs):
-        self.log('Error: ' + fmt, *args, **kwargs)
+        self.log(f'Error: {fmt}', *args, **kwargs)
         self.error_count += 1
 
     def warning(self, fmt, *args, **kwargs):
-        self.log('Warning: ' + fmt, *args, **kwargs)
+        self.log(f'Warning: {fmt}', *args, **kwargs)
         self.warning_count += 1
 
 class TestCaseOutcomes:
@@ -87,8 +87,8 @@ def analyze_driver_vs_reference(outcomes, component_ref, component_driver, ignor
                 driver_test_passed = True
             if component_ref in entry:
                 reference_test_passed = True
-        if(driver_test_passed is False and reference_test_passed is True):
-            print('{}: driver: skipped/failed; reference: passed'.format(key))
+        if (driver_test_passed is False and reference_test_passed is True):
+            print(f'{key}: driver: skipped/failed; reference: passed')
             result = False
     return result
 
@@ -128,7 +128,7 @@ def do_analyze_coverage(outcome_file, args):
 
 def do_analyze_driver_vs_reference(outcome_file, args):
     """Perform driver vs reference analyze."""
-    ignored_tests = ['test_suite_' + x for x in args['ignored_suites']]
+    ignored_tests = [f'test_suite_{x}' for x in args['ignored_suites']]
 
     outcomes = read_outcome_file(outcome_file)
     return analyze_driver_vs_reference(outcomes, args['component_ref'],
@@ -177,7 +177,7 @@ def main():
 
             for task in tasks:
                 if task not in TASKS:
-                    print('Error: invalid task: {}'.format(task))
+                    print(f'Error: invalid task: {task}')
                     sys.exit(1)
 
         for task in TASKS:

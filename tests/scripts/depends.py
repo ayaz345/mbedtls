@@ -104,7 +104,7 @@ def log_line(text, prefix='depends.py:', suffix='', color=None):
     if color is not None:
         prefix = color[0] + prefix
         suffix = suffix + color[1]
-    sys.stderr.write(prefix + ' ' + text + suffix + '\n')
+    sys.stderr.write(f'{prefix} {text}{suffix}' + '\n')
     sys.stderr.flush()
 
 def log_command(cmd):
@@ -155,9 +155,8 @@ Return them in a generator."""
     with open(options.config, encoding="utf-8") as config_file:
         rx = re.compile(r'\s*(?://\s*)?#define\s+(\w+)\s*(?:$|/[/*])')
         for line in config_file:
-            m = re.match(rx, line)
-            if m:
-                yield m.group(1)
+            if m := re.match(rx, line):
+                yield m[1]
 
 class Job:
     """A job builds the library in a specific configuration and runs some tests."""
@@ -181,11 +180,11 @@ If what is None, announce the start of the job.
 If what is True, announce that the job has passed.
 If what is False, announce that the job has failed.'''
         if what is True:
-            log_line(self.name + ' PASSED', color=colors.green)
+            log_line(f'{self.name} PASSED', color=colors.green)
         elif what is False:
-            log_line(self.name + ' FAILED', color=colors.red)
+            log_line(f'{self.name} FAILED', color=colors.red)
         else:
-            log_line('starting ' + self.name)
+            log_line(f'starting {self.name}')
 
     def configure(self, options):
         '''Set library configuration options as required for the job.'''
@@ -213,7 +212,7 @@ and subsequent commands are tests that cannot run if the build failed).'''
             ret = subprocess.call(command)
             if ret != 0:
                 if command[0] not in ['make', options.make_command]:
-                    log_line('*** [{}] Error {}'.format(' '.join(command), ret))
+                    log_line(f"*** [{' '.join(command)}] Error {ret}")
                 if not options.keep_going or not built:
                     return False
                 success = False
@@ -336,9 +335,7 @@ Each job runs the specified commands.
 If exclude is a regular expression, skip generated jobs whose description
 would match this regular expression."""
         super().__init__(symbols, commands, exclude)
-        base_config_settings = {}
-        for symbol in symbols:
-            base_config_settings[symbol] = False
+        base_config_settings = {symbol: False for symbol in symbols}
         for symbol in symbols:
             description = symbol
             if exclude and re.match(exclude, description):
@@ -362,7 +359,7 @@ Each job in the domain disables one of the specified symbols.
 Each job runs the specified commands."""
         super().__init__(symbols, commands, exclude)
         for symbol in symbols:
-            description = '!' + symbol
+            description = f'!{symbol}'
             if exclude and re.match(exclude, description):
                 continue
             config_settings = {symbol: False}
@@ -383,8 +380,8 @@ class CipherInfo: # pylint: disable=too-few-public-methods
         with open('include/mbedtls/cipher.h', encoding="utf-8") as fh:
             for line in fh:
                 m = re.match(r' *MBEDTLS_CIPHER_ID_(\w+),', line)
-                if m and m.group(1) not in ['NONE', 'NULL', '3DES']:
-                    self.base_symbols.add('MBEDTLS_' + m.group(1) + '_C')
+                if m and m[1] not in ['NONE', 'NULL', '3DES']:
+                    self.base_symbols.add(f'MBEDTLS_{m[1]}_C')
 
 class DomainData:
     """A container for domains and jobs, used to structurize testing."""
@@ -471,7 +468,7 @@ domain_data should be a DomainData instance that describes the available
 domains and jobs.
 Run the jobs listed in options.tasks."""
     if not hasattr(options, 'config_backup'):
-        options.config_backup = options.config + '.bak'
+        options.config_backup = f'{options.config}.bak'
     colors = Colors(options)
     jobs = []
     failures = []
@@ -482,13 +479,12 @@ Run the jobs listed in options.tasks."""
     try:
         for job in jobs:
             success = run(options, job, colors=colors)
-            if not success:
-                if options.keep_going:
-                    failures.append(job.name)
-                else:
-                    return False
-            else:
+            if success:
                 successes.append(job.name)
+            elif options.keep_going:
+                failures.append(job.name)
+            else:
+                return False
         restore_config(options)
     except:
         # Restore the configuration, except in stop-on-error mode if there
@@ -498,9 +494,9 @@ Run the jobs listed in options.tasks."""
             restore_config(options)
         raise
     if successes:
-        log_line('{} passed'.format(' '.join(successes)), color=colors.bold_green)
+        log_line(f"{' '.join(successes)} passed", color=colors.bold_green)
     if failures:
-        log_line('{} FAILED'.format(' '.join(failures)), color=colors.bold_red)
+        log_line(f"{' '.join(failures)} FAILED", color=colors.bold_red)
         return False
     else:
         return True
