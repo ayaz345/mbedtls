@@ -49,7 +49,7 @@ def get_src_files() -> List[str]:
             stderr=STDERR_UTF8, check=False)
 
     if result.returncode != 0:
-        print_err("git ls-files returned: " + str(result.returncode))
+        print_err(f"git ls-files returned: {str(result.returncode)}")
         return []
     else:
         src_files = str(result.stdout, "utf-8").split()
@@ -65,11 +65,10 @@ def get_uncrustify_version() -> str:
     """
     result = subprocess.run([UNCRUSTIFY_EXE, "--version"], \
             stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
-    if result.returncode != 0:
-        print_err("Could not get Uncrustify version:", str(result.stderr, "utf-8"))
-        return ""
-    else:
+    if result.returncode == 0:
         return str(result.stdout, "utf-8")
+    print_err("Could not get Uncrustify version:", str(result.stderr, "utf-8"))
+    return ""
 
 def check_style_is_correct(src_file_list: List[str]) -> bool:
     """
@@ -85,19 +84,19 @@ def check_style_is_correct(src_file_list: List[str]) -> bool:
         # Uncrustify makes changes to the code and places the result in a new
         # file with the extension ".uncrustify". To get the changes (if any)
         # simply diff the 2 files.
-        diff_cmd = ["diff", "-u", src_file, src_file + ".uncrustify"]
+        diff_cmd = ["diff", "-u", src_file, f"{src_file}.uncrustify"]
         result = subprocess.run(diff_cmd, stdout=subprocess.PIPE, \
                 stderr=STDERR_UTF8, check=False)
         if len(result.stdout) > 0:
-            print(src_file + " - Incorrect code style.", file=STDOUT_UTF8)
+            print(f"{src_file} - Incorrect code style.", file=STDOUT_UTF8)
             print("File changed - diff:", file=STDOUT_UTF8)
             print(str(result.stdout, "utf-8"), file=STDOUT_UTF8)
             style_correct = False
         else:
-            print(src_file + " - OK.", file=STDOUT_UTF8)
+            print(f"{src_file} - OK.", file=STDOUT_UTF8)
 
         # Tidy up artifact
-        os.remove(src_file + ".uncrustify")
+        os.remove(f"{src_file}.uncrustify")
 
     return style_correct
 
@@ -118,13 +117,10 @@ def fix_style(src_file_list: List[str]) -> int:
     fix_style_single_pass(src_file_list)
     fix_style_single_pass(src_file_list)
 
-    # Guard against future changes that cause the codebase to require
-    # more passes.
-    if not check_style_is_correct(src_file_list):
-        print("Code style still incorrect after second run of Uncrustify.")
-        return 1
-    else:
+    if check_style_is_correct(src_file_list):
         return 0
+    print("Code style still incorrect after second run of Uncrustify.")
+    return 1
 
 def main() -> int:
     """
@@ -149,10 +145,7 @@ def main() -> int:
         return fix_style(src_files)
     else:
         # Check mode
-        if check_style_is_correct(src_files):
-            return 0
-        else:
-            return 1
+        return 0 if check_style_is_correct(src_files) else 1
 
 if __name__ == '__main__':
     sys.exit(main())

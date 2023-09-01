@@ -90,18 +90,17 @@ def translate_gnutls(m_cipher):
     # SHA in Mbed TLS == SHA1 GnuTLS,
     # if the last 3 chars are SHA append 1
     if m_cipher[-3:] == "SHA":
-        m_cipher = m_cipher+"1"
+        m_cipher = f"{m_cipher}1"
 
     # CCM or CCM-8 should be followed by ":+AEAD"
     # Replace "GCM:+SHAxyz" with "GCM:+AEAD"
     if "CCM" in m_cipher or "GCM" in m_cipher:
         m_cipher = re.sub(r"GCM-SHA\d\d\d", "GCM", m_cipher)
-        m_cipher = m_cipher+":+AEAD"
+        m_cipher = f"{m_cipher}:+AEAD"
 
-    # Replace the last "-" with ":+"
     else:
         index = m_cipher.rindex("-")
-        m_cipher = m_cipher[:index] + ":+" + m_cipher[index+1:]
+        m_cipher = f"{m_cipher[:index]}:+{m_cipher[index + 1:]}"
 
     return m_cipher
 
